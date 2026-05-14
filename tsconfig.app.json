@@ -27,6 +27,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "amplify_outputs.json"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }
