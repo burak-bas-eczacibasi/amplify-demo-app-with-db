@@ -4,7 +4,7 @@ const schema = a.schema({
   Project: a.model({
     title: a.string().required(),
     description: a.string(),
-    status: a.enum(['Not Started', 'In Progress', 'Completed']),
+    status: a.string().required(),
   })
   .authorization(allow => [allow.owner()]),
 });
