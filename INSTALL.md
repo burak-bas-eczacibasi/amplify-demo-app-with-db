@@ -37,15 +37,146 @@ You only need:
 
 ---
 
-## 2. Push Code to GitHub
+## 2. How the Backend Works (Cognito, AppSync, DynamoDB)
 
-### 2.1 GitHub Repository
+### 2.1 You Do NOT Create These Manually
+
+With Amplify Gen 2, all backend resources are **defined in code** (infrastructure-as-code). You do NOT need to:
+
+- ❌ Go to the AWS Console and create a Cognito User Pool
+- ❌ Go to the AWS Console and create a DynamoDB table
+- ❌ Go to the AWS Console and create an AppSync API
+- ❌ Configure any of these services manually
+
+Instead, Amplify reads your TypeScript files and **creates everything automatically** during deployment.
+
+### 2.2 What Each File Creates
+
+| File in Your Code | AWS Resource Created Automatically |
+|---|---|
+| `amplify/auth/resource.ts` | **Amazon Cognito User Pool** — handles user sign-up, sign-in, email verification, password policies |
+| `amplify/data/resource.ts` | **AWS AppSync GraphQL API** + **Amazon DynamoDB Table** — stores and retrieves project data with per-user isolation |
+| `amplify/backend.ts` | Ties auth and data together into a single deployable backend |
+
+### 2.3 Amazon Cognito (Authentication)
+
+**What it does:** Manages user accounts, passwords, and sessions.
+
+**How it's configured** (from `amplify/auth/resource.ts`):
+
+```typescript
+import { defineAuth } from '@aws-amplify/backend';
+
+export const auth = defineAuth({
+  loginWith: {
+    email: true,  // Users sign in with email + password
+  },
+});
+```
+
+**What Amplify creates from this:**
+- A Cognito User Pool with email as the login identifier
+- Email verification enabled (users must verify their email)
+- Minimum 8-character password requirement (Cognito default)
+- Hosted sign-up/sign-in flows
+- JWT token management for authenticated API calls
+
+**You don't need to:**
+- Create the User Pool in the AWS Console
+- Configure email verification settings
+- Set up password policies
+- Manage tokens or sessions
+
+### 2.4 Amazon DynamoDB + AWS AppSync (Database & API)
+
+**What it does:** Stores project data and provides a GraphQL API to access it.
+
+**How it's configured** (from `amplify/data/resource.ts`):
+
+```typescript
+import { a, defineData, type ClientSchema } from '@aws-amplify/backend';
+
+const schema = a.schema({
+  Project: a.model({
+    title: a.string().required(),
+    description: a.string(),
+    status: a.enum(['Not Started', 'In Progress', 'Completed']),
+  })
+  .authorization(allow => [allow.owner()]),
+});
+
+export type Schema = ClientSchema<typeof schema>;
+
+export const data = defineData({
+  schema,
+  authorizationModes: {
+    defaultAuthorizationMode: 'userPool',
+  },
+});
+```
+
+**What Amplify creates from this:**
+- A **DynamoDB table** named `Project` with fields: id, title, description, status, owner, createdAt, updatedAt
+- An **AppSync GraphQL API** with auto-generated queries and mutations (create, read, update, delete, list)
+- **Authorization rules** — each user can only see/edit their own projects (`allow.owner()`)
+- **Resolvers** that connect the API to DynamoDB
+
+**You don't need to:**
+- Create a DynamoDB table in the AWS Console
+- Define partition keys or indexes
+- Write GraphQL schema files
+- Create API resolvers
+- Set up authorization rules manually
+
+### 2.5 The Deployment Flow
+
+```
+You push code to GitHub
+        │
+        ▼
+Amplify detects the push
+        │
+        ▼
+Amplify reads amplify/ folder
+        │
+        ├── amplify/auth/resource.ts → Creates Cognito User Pool
+        ├── amplify/data/resource.ts → Creates AppSync API + DynamoDB Table
+        └── amplify/backend.ts      → Connects them together
+        │
+        ▼
+Amplify builds frontend (npm run build)
+        │
+        ▼
+Amplify deploys frontend to CloudFront CDN
+        │
+        ▼
+App is live with full backend ✓
+```
+
+### 2.6 Where to See the Created Resources
+
+After deployment, you can verify the resources in the AWS Console:
+
+| AWS Service | Where to Find It |
+|---|---|
+| **Cognito** | AWS Console → Amazon Cognito → User pools → look for your app's pool |
+| **AppSync** | AWS Console → AWS AppSync → APIs → look for your app's API |
+| **DynamoDB** | AWS Console → DynamoDB → Tables → look for `Project-xxxxx` table |
+| **CloudFormation** | AWS Console → CloudFormation → Stacks → Amplify-created stacks |
+
+These are created and managed by Amplify. You can view them but should NOT modify them manually — changes should be made in code and pushed to GitHub.
+
+---
+
+## 3. Push Code to GitHub
+
+### 3.1 GitHub Repository
 
 Your repository is already created at:
 
 **https://github.com/burak-bas-eczacibasi/amplify-demo-app-with-db**
 
-### 2.2 Push Your Code
+### 3.2 Push Your Code
 
 Open a terminal in your project folder and run:
 
@@ -57,7 +188,7 @@ git commit -m "Initial commit - Project Tracker with Amplify Gen 2"
 git push -u origin main
 ```
 
-### 2.3 Verify on GitHub
+### 3.3 Verify on GitHub
 
 Go to https://github.com/burak-bas-eczacibasi/amplify-demo-app-with-db and confirm all files are visible, including:
 - `amplify/` folder (auth, data, backend.ts)
@@ -67,13 +198,13 @@ Go to https://github.com/burak-bas-eczacibasi/amplify-demo-app-with-db and confi
 
 ---
 
-## 3. AWS Account Setup
+## 4. AWS Account Setup
 
-### 3.1 Sign In to AWS Console
+### 4.1 Sign In to AWS Console
 
 Go to https://console.aws.amazon.com and sign in.
 
-### 3.2 Select a Region
+### 4.2 Select a Region
 
 In the top-right corner of the AWS Console, select your preferred region:
 - `EU (Ireland)` — eu-west-1
@@ -82,7 +213,7 @@ In the top-right corner of the AWS Console, select your preferred region:
 
 **Important:** Use the same region throughout this guide.
 
-### 3.3 IAM Permissions
+### 4.3 IAM Permissions
 
 Your AWS user needs permissions for Amplify to create resources. If you're using the root account or an admin user, you already have sufficient permissions.
 
@@ -100,14 +231,14 @@ The simplest option: attach the **`AdministratorAccess`** managed policy to your
 
 ---
 
-## 4. Connect GitHub to Amplify
+## 5. Connect GitHub to Amplify
 
-### 4.1 Open AWS Amplify Console
+### 5.1 Open AWS Amplify Console
 
 1. Go to **AWS Console** → search for **"Amplify"** → click **AWS Amplify**
 2. Click **"Create new app"**
 
-### 4.2 Connect Your Repository
+### 5.2 Connect Your Repository
 
 1. Select **"GitHub"** as the source provider
 2. Click **"Next"**
@@ -117,7 +248,7 @@ The simplest option: attach the **`AdministratorAccess`** managed policy to your
 6. Select the branch: `main`
 7. Click **"Next"**
 
-### 4.3 Configure Build Settings
+### 5.3 Configure Build Settings
 
 Amplify auto-detects that this is an Amplify Gen 2 project. It will show build settings similar to:
 
@@ -144,12 +275,12 @@ frontend:
 
 If Amplify doesn't auto-detect the build settings, you may need to create an `amplify.yml` file at the project root (see Section 10 Troubleshooting).
 
-### 4.4 Review and Deploy
+### 5.4 Review and Deploy
 
 1. Review the settings
 2. Click **"Save and deploy"**
 
-### 4.5 Wait for Deployment
+### 5.5 Wait for Deployment
 
 The first deployment takes **5-10 minutes**. Amplify will:
 
@@ -163,9 +294,9 @@ You can watch the progress in the Amplify Console. Each phase shows logs you can
 
 ---
 
-## 5. Verify Deployment
+## 6. Verify Deployment
 
-### 5.1 Get Your App URL
+### 6.1 Get Your App URL
 
 Once deployment succeeds, Amplify provides a URL like:
 
@@ -175,7 +306,7 @@ https://main.d1a2b3c4d5.amplifyapp.com
 
 Click the URL or find it in the Amplify Console under your app → branch `main`.
 
-### 5.2 Check AWS Resources Created
+### 6.2 Check AWS Resources Created
 
 Go to these AWS services to verify resources were created:
 
@@ -188,9 +319,9 @@ Go to these AWS services to verify resources were created:
 
 ---
 
-## 6. Using the Application
+## 7. Using the Application
 
-### 6.1 Sign Up
+### 7.1 Sign Up
 
 1. Open your app URL in a browser
 2. You'll see the sign-in/sign-up screen
@@ -200,18 +331,18 @@ Go to these AWS services to verify resources were created:
    - **Password:** minimum 8 characters
 5. Click **"Create Account"**
 
-### 6.2 Verify Email
+### 7.2 Verify Email
 
 1. Check your email inbox for a message from `no-reply@verificationemail.com`
 2. Copy the **verification code** (6 digits)
 3. Enter it in the app
 4. Click **"Confirm"**
 
-### 6.3 Sign In
+### 7.3 Sign In
 
 After verification, you're automatically signed in and see the Dashboard.
 
-### 6.4 Create a Project
+### 7.4 Create a Project
 
 1. Click **"Create Project"**
 2. Enter a title (required, 1-100 characters)
@@ -219,31 +350,31 @@ After verification, you're automatically signed in and see the Dashboard.
 4. Select a status: "Not Started", "In Progress", or "Completed"
 5. Click **"Create Project"**
 
-### 6.5 Edit a Project
+### 7.5 Edit a Project
 
 1. Click **"Edit"** on any project card
 2. Modify the title, description, or status
 3. Click **"Save Changes"**
 
-### 6.6 Delete a Project
+### 7.6 Delete a Project
 
 1. Click **"Delete"** on any project card
 2. Confirm deletion in the dialog
 3. The project is permanently removed
 
-### 6.7 Sign Out
+### 7.7 Sign Out
 
 Click **"Sign Out"** in the header.
 
 ---
 
-## 7. Making Changes
+## 8. Making Changes
 
-### 7.1 Edit Code Locally
+### 8.1 Edit Code Locally
 
 Make changes to files in your project folder using any editor (VS Code, Kiro, etc.).
 
-### 7.2 Push to GitHub
+### 8.2 Push to GitHub
 
 ```bash
 git add .
@@ -251,13 +382,13 @@ git commit -m "Description of your changes"
 git push
 ```
 
-### 7.3 Automatic Deployment
+### 8.3 Automatic Deployment
 
 Amplify automatically detects the push and starts a new deployment. Within 3-5 minutes, your changes are live.
 
 You can monitor the build in the **Amplify Console** → your app → **Deployments**.
 
-### 7.4 Branch Deployments (Optional)
+### 8.4 Branch Deployments (Optional)
 
 You can connect multiple branches for different environments:
 
@@ -267,28 +398,28 @@ You can connect multiple branches for different environments:
 
 ---
 
-## 8. Custom Domain (Optional)
+## 9. Custom Domain (Optional)
 
-### 8.1 Add a Custom Domain
+### 9.1 Add a Custom Domain
 
 1. In Amplify Console → your app → **"Hosting"** → **"Custom domains"**
 2. Click **"Add domain"**
 3. Enter your domain (e.g., `projects.yourdomain.com`)
 4. Amplify provides DNS records to configure
 
-### 8.2 Configure DNS
+### 9.2 Configure DNS
 
 Add the provided CNAME or ALIAS records to your domain's DNS settings (in Route 53, Cloudflare, or your DNS provider).
 
-### 8.3 SSL Certificate
+### 9.3 SSL Certificate
 
 Amplify automatically provisions and manages an SSL certificate for your custom domain. HTTPS is enabled by default.
 
 ---
 
-## 9. Cleanup & Teardown
+## 10. Cleanup & Teardown
 
-### 9.1 Delete the Amplify App
+### 10.1 Delete the Amplify App
 
 This removes ALL resources (frontend, backend, Cognito, DynamoDB data):
 
@@ -301,7 +432,7 @@ This removes ALL resources (frontend, backend, Cognito, DynamoDB data):
 
 **Warning:** This permanently deletes all user accounts and project data.
 
-### 9.2 Verify Cleanup
+### 10.2 Verify Cleanup
 
 After deletion, check that these are removed:
 - **CloudFormation** → no remaining Amplify stacks
@@ -309,7 +440,7 @@ After deletion, check that these are removed:
 - **DynamoDB** → table deleted
 - **AppSync** → API deleted
 
-### 9.3 Delete GitHub Repository (Optional)
+### 10.3 Delete GitHub Repository (Optional)
 
 If you no longer need the code:
 1. Go to your repository on GitHub
@@ -317,7 +448,7 @@ If you no longer need the code:
 
 ---
 
-## 10. Troubleshooting
+## 11. Troubleshooting
 
 ### Build fails: "Cannot find module"
 
@@ -377,7 +508,7 @@ This usually means the `amplify_outputs.json` wasn't properly generated during d
 
 ---
 
-## 11. Cost Estimate
+## 12. Cost Estimate
 
 ### AWS Free Tier (First 12 months)
 

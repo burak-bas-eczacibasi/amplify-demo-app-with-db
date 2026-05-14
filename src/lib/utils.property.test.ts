@@ -19,16 +19,16 @@ describe('Property 3: Project sort ordering', () => {
   it('sort produces descending createdAt order for any list of projects with distinct timestamps', () => {
     // Generator for a list of projects with distinct createdAt ISO date strings
     const distinctProjectsArb = fc
-      .set(
+      .uniqueArray(
         fc.date({
           min: new Date('2000-01-01T00:00:00.000Z'),
           max: new Date('2099-12-31T23:59:59.999Z'),
         }),
-        { minLength: 0, maxLength: 20, compare: (a, b) => a.getTime() === b.getTime() }
+        { minLength: 0, maxLength: 20, comparator: (a: Date, b: Date) => a.getTime() === b.getTime() }
       )
-      .map((dates) =>
+      .map((dates: Date[]) =>
         dates.map(
-          (date, index): Project => ({
+          (date: Date, index: number): Project => ({
             id: `project-${index}`,
             title: `Project ${index}`,
             description: `Description ${index}`,
@@ -41,7 +41,7 @@ describe('Property 3: Project sort ordering', () => {
       );
 
     fc.assert(
-      fc.property(distinctProjectsArb, (projects) => {
+      fc.property(distinctProjectsArb, (projects: Project[]) => {
         const sorted = sortProjectsByDate(projects);
 
         // Verify descending order: each element's createdAt >= next element's createdAt
