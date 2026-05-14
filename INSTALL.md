@@ -9,16 +9,17 @@ This guide walks you through deploying the Project Tracker application using **G
 ## Table of Contents
 
 1. [Prerequisites](#1-prerequisites)
-2. [Push Code to GitHub](#2-push-code-to-github)
-3. [AWS Account Setup](#3-aws-account-setup)
-4. [Connect GitHub to Amplify](#4-connect-github-to-amplify)
-5. [Verify Deployment](#5-verify-deployment)
-6. [Using the Application](#6-using-the-application)
-7. [Making Changes](#7-making-changes)
-8. [Custom Domain (Optional)](#8-custom-domain-optional)
-9. [Cleanup & Teardown](#9-cleanup--teardown)
-10. [Troubleshooting](#10-troubleshooting)
-11. [Cost Estimate](#11-cost-estimate)
+2. [How the Backend Works (Cognito, AppSync, DynamoDB)](#2-how-the-backend-works-cognito-appsync-dynamodb)
+3. [Push Code to GitHub](#3-push-code-to-github)
+4. [AWS Account Setup](#4-aws-account-setup)
+5. [Connect GitHub to Amplify](#5-connect-github-to-amplify)
+6. [Verify Deployment](#6-verify-deployment)
+7. [Using the Application](#7-using-the-application)
+8. [Making Changes](#8-making-changes)
+9. [Custom Domain (Optional)](#9-custom-domain-optional)
+10. [Cleanup & Teardown](#10-cleanup--teardown)
+11. [Troubleshooting](#11-troubleshooting)
+12. [Cost Estimate](#12-cost-estimate)
 
 ---
 
