@@ -25,3 +25,7 @@ dist-ssr
 
 # Amplify
 .amplify
+
+# amplify
+amplify_outputs*
+amplifyconfiguration*
